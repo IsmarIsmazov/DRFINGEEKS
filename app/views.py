@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -21,7 +20,10 @@ def posts_view(request):
 @api_view(["GET"])
 def posts_detail_view(request, **kwargs):
     if request.method == "GET":
-        posts = Post.objects.get(id=kwargs['pk'])
+        try:
+            posts = Post.objects.get(id=kwargs['pk'])
+        except Post.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         serializer = PostSerializer(posts, many=False)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
     else:
