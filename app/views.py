@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from app.models import Post
-from app.serializers import PostSerializer
+from app.serializers import PostSerializer, PostValidateSerializer
 
 
 # Create your views here.
@@ -15,11 +15,15 @@ def posts_view(request):
         serializer = PostSerializer(posts, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
     elif request.method == "POST":
-        title = request.data.get('title')
-        category = request.data.get("category")
-        tags = request.data.get("tags")
-        descriptions = request.data.get("descriptions")
-        likes = request.data.get("likes")
+        serializer = PostValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(data={"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        title = serializer.validated_data.get('title')
+        category = serializer.validated_data.get('category')
+        tags = serializer.validated_data.get('tags')
+        descriptions = serializer.validated_data.get('descriptions')
+        likes = serializer.validated_data.get('likes')
         post = Post.objects.create(title=title, category=category, descriptions=descriptions, likes=likes)
         post.tags.set(tags)
         post.save()
@@ -35,14 +39,16 @@ def posts_detail_view(request, **kwargs):
     if request.method == "GET":
         serializer = PostSerializer(posts, many=False)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
-    elif request.method == "POST":
+    elif request.method == "DELETE":
         posts.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     else:
-        posts.title = request.data.get('title')
-        posts.category = request.data.get("category")
-        posts.tags.set(request.data.get("tags"))
-        posts.descriptions = request.data.get("descriptions")
-        posts.likes = request.data.get("likes")
+        serializer = PostValidateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        posts.title = serializer.validated_data.get('title')
+        posts.category = serializer.validated_data.get("category")
+        posts.tags.set(serializer.validated_data.get("tags"))
+        posts.descriptions = serializer.validated_data.get("descriptions")
+        posts.likes = serializer.validated_data.get("likes")
         posts.save()
         return Response(PostSerializer(posts).data)
